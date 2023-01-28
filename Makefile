@@ -27,6 +27,7 @@ TESTS = test/step0.exe \
         test/step14.exe \
         test/step15.exe \
         test/step16.exe \
+        test/step17.exe \
 
 CFLAGS := $(CFLAGS) -g -W -Wall -Wno-unused-parameter -iquote .
 
@@ -46,7 +47,7 @@ endif
 .SUFFIXES:
 .SUFFIXES: .c .o
 
-.PHONY: all clean
+.PHONY: all clean setup_tap_in_docker setup_nat_in_docker
 
 all: $(APPS) $(TESTS)
 
@@ -66,6 +67,13 @@ setup_tap_in_docker:
 	ip tuntap add mode tap user root name tap0
 	ip addr add 192.0.2.1/24 dev tap0
 	ip link set tap0 up
+
+setup_nat_in_docker:
+	# This is already 1 on my docker
+	# bash -c "echo 1 > /proc/sys/net/ipv4/ip_forward"
+	iptables -A FORWARD -o tap0 -j ACCEPT
+	iptables -A FORWARD -i tap0 -j ACCEPT
+	iptables -t nat -A POSTROUTING -s 192.0.2.0/24 -o eth0 -j MASQUERADE
 
 clean:
 	rm -rf $(APPS) $(APPS:.exe=.o) $(OBJS) $(DRIVERS) $(TESTS) $(TESTS:.exe=.o)

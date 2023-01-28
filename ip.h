@@ -25,6 +25,9 @@
 
 typedef uint32_t ip_addr_t;
 
+extern const ip_addr_t IP_ADDR_ANY; /* 0.0.0.0 */
+extern const ip_addr_t IP_ADDR_BROADCAST; /* 255.255.255.255 */
+
 struct ip_iface {
     struct net_iface iface;
     struct ip_iface *next;
@@ -37,6 +40,11 @@ extern int
 ip_addr_pton(const char *p, ip_addr_t *n);
 extern char *
 ip_addr_ntop(ip_addr_t n, char *p, size_t size);
+
+extern int
+ip_route_set_default_gateway(struct ip_iface *iface, const char *gateway);
+extern struct ip_iface *
+ip_route_get_iface(ip_addr_t dst);
 
 extern struct ip_iface *
 ip_iface_alloc(const char *unicast, const char *netmask);

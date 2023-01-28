@@ -135,9 +135,11 @@ arp_cache_select(ip_addr_t pa)
 
     for (entry = caches; entry < tailof(caches); entry++) {
         if (entry->state != ARP_CACHE_STATE_FREE && entry->pa == pa) {
+            debugf("arp_cache found for pa=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)));
             return entry;
         }
     }
+    debugf("arp_cache not found for pa=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)));
     return NULL;
 }
 
