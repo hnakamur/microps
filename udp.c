@@ -42,7 +42,7 @@ udp_dump(const uint8_t *data, size_t len)
 }
 
 static void
-udp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface)
+udp_input(const uint8_t *input, size_t input_len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface)
 {
     struct pseudo_hdr pseudo;
     uint16_t psum = 0;
@@ -50,67 +50,67 @@ udp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct 
     char addr1[IP_ADDR_STR_LEN];
     char addr2[IP_ADDR_STR_LEN];
 
-    if (len < sizeof(*hdr)) {
+    if (input_len < sizeof(*hdr)) {
         errorf("too short");
         return;
     }
-    hdr = (struct udp_hdr *)data;
-    if (len != ntoh16(hdr->len)) { /* just to make sure */
-        errorf("length error: len=%zu, hdr->len=%u", len, ntoh16(hdr->len));
+    hdr = (struct udp_hdr *)input;
+    if (input_len != ntoh16(hdr->len)) { /* just to make sure */
+        errorf("length error: len=%zu, hdr->len=%u", input_len, ntoh16(hdr->len));
         return;
     }
     pseudo.src = src;
     pseudo.dst = dst;
     pseudo.zero = 0;
     pseudo.protocol = IP_PROTOCOL_UDP;
-    pseudo.len = hton16(len);
+    pseudo.len = hton16(input_len);
     psum = ~cksum16((uint16_t *)&pseudo, sizeof(pseudo), 0);
-    if (cksum16((uint16_t *)hdr, len, psum) != 0) {
-        errorf("checksum error: sum=0x%04x, verify=0x%04x", ntoh16(hdr->sum), ntoh16(cksum16((uint16_t *)hdr, len, -hdr->sum + psum)));
+    if (cksum16((uint16_t *)hdr, input_len, psum) != 0) {
+        errorf("checksum error: sum=0x%04x, verify=0x%04x", ntoh16(hdr->sum), ntoh16(cksum16((uint16_t *)hdr, input_len, -hdr->sum + psum)));
         return;
     }
     debugf("%s:%d => %s:%d, len=%zu (payload=%zu)",
         ip_addr_ntop(src, addr1, sizeof(addr1)), ntoh16(hdr->src),
         ip_addr_ntop(dst, addr2, sizeof(addr2)), ntoh16(hdr->dst),
-        len, len - sizeof(*hdr));
-    udp_dump(data, len);
+        input_len, input_len - sizeof(*hdr));
+    udp_dump(input, input_len);
 }
 
 ssize_t
-udp_output(struct ip_endpoint *src, struct ip_endpoint *dst, const uint8_t *data, size_t len)
+udp_output(struct ip_endpoint *src, struct ip_endpoint *dst, const uint8_t *data, size_t data_len)
 {
     uint8_t buf[IP_PAYLOAD_SIZE_MAX];
     struct udp_hdr *hdr;
     struct pseudo_hdr pseudo;
-    uint16_t total, psum = 0;
+    uint16_t output_len, psum = 0;
     char ep1[IP_ENDPOINT_STR_LEN];
     char ep2[IP_ENDPOINT_STR_LEN];
 
-    if (len > IP_PAYLOAD_SIZE_MAX - sizeof(*hdr)) {
+    if (data_len > IP_PAYLOAD_SIZE_MAX - sizeof(*hdr)) {
         errorf("too long");
         return -1;
     }
-    total = sizeof(*hdr) + len;
+    output_len = sizeof(*hdr) + data_len;
     pseudo.src = src->addr;
     pseudo.dst = dst->addr;
     pseudo.zero = 0;
     pseudo.protocol = IP_PROTOCOL_UDP;
-    pseudo.len = hton16(total);
+    pseudo.len = hton16(output_len);
     psum = ~cksum16((uint16_t *)&pseudo, sizeof(pseudo), 0);
     hdr = (struct udp_hdr *)buf;
     hdr->src = src->port;
     hdr->dst = dst->port;
-    hdr->len = hton16(total);
+    hdr->len = hton16(output_len);
     hdr->sum = 0;
-    memcpy(buf+sizeof(*hdr), data, len);
-    hdr->sum = cksum16((uint16_t *)buf, total, psum);
+    memcpy(buf+sizeof(*hdr), data, data_len);
+    hdr->sum = cksum16((uint16_t *)buf, output_len, psum);
     debugf("%s => %s, len=%zu (payload=%zu)",
-        ip_endpoint_ntop(src, ep1, sizeof(ep1)), ip_endpoint_ntop(dst, ep2, sizeof(ep2)), total, len);
-    udp_dump((uint8_t *)hdr, total);
-    if (ip_output(IP_PROTOCOL_UDP, buf, total, src->addr, dst->addr) == -1) {
+        ip_endpoint_ntop(src, ep1, sizeof(ep1)), ip_endpoint_ntop(dst, ep2, sizeof(ep2)), output_len, data_len);
+    udp_dump((uint8_t *)hdr, output_len);
+    if (ip_output(IP_PROTOCOL_UDP, buf, output_len, src->addr, dst->addr) == -1) {
         return -1;
     }
-    return len;
+    return data_len;
 }
 
 int

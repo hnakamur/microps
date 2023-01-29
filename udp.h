@@ -7,7 +7,7 @@
 #include "ip.h"
 
 extern ssize_t
-udp_output(struct ip_endpoint *src, struct ip_endpoint *dst, const uint8_t *buf, size_t len);
+udp_output(struct ip_endpoint *src, struct ip_endpoint *dst, const uint8_t *data, size_t data_len);
 
 extern int
 udp_init(void);
