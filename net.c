@@ -11,6 +11,7 @@
 #include "ip.h"
 #include "icmp.h"
 #include "arp.h"
+#include "udp.h"
 
 struct net_protocol {
     struct net_protocol *next;
@@ -313,6 +314,10 @@ net_init(void)
         return -1;
     }
     if (icmp_init() == -1) {
+        errorf("icmp_init() failure");
+        return -1;
+    }
+    if (udp_init() == -1) {
         errorf("icmp_init() failure");
         return -1;
     }
